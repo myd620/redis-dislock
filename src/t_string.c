@@ -63,7 +63,7 @@ static int checkStringLength(client *c, long long size) {
 #define OBJ_SET_XX (1<<1)     /* Set if key exists. */
 #define OBJ_SET_EX (1<<2)     /* Set if time in seconds is given */
 #define OBJ_SET_PX (1<<3)     /* Set if time in ms in given */
-#define OBJ_SET_EP (1<<4)     /* Set if EPHEMERAL*/
+#define OBJ_SET_TP (1<<4)     /* Set if EPHEMERAL*/
 
 
 
@@ -87,9 +87,9 @@ void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire,
         return;
     }
 	
-	if (flags & OBJ_SET_EP)
+	if (flags & OBJ_SET_TP)
     {
-        listAddNodeTail(c->epkeylist,key);
+        listAddNodeTail(c->tpkeylist,key);
     }
 	
     setKey(c->db,key,val);
@@ -153,9 +153,9 @@ void setnxCommand(client *c) {
     setGenericCommand(c,OBJ_SET_NX,c->argv[1],c->argv[2],NULL,0,shared.cone,shared.czero);
 }
 
-void setepCommand(client *c) {
+void settpCommand(client *c) {
     c->argv[2] = tryObjectEncoding(c->argv[2]);
-    setGenericCommand(c,OBJ_SET_NX|OBJ_SET_EP,c->argv[1],c->argv[2],NULL,0,shared.cone,shared.czero);
+    setGenericCommand(c,OBJ_SET_NX|OBJ_SET_TP,c->argv[1],c->argv[2],NULL,0,shared.cone,shared.czero);
 }
 
 

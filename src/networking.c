@@ -122,7 +122,7 @@ client *createClient(int fd) {
     c->watched_keys = listCreate();
     c->pubsub_channels = dictCreate(&setDictType,NULL);
     c->pubsub_patterns = listCreate();
-	c->epkeylist       = listCreate();
+	c->tpkeylist       = listCreate();
     c->peerid = NULL;
     listSetFreeMethod(c->pubsub_patterns,decrRefCountVoid);
     listSetMatchMethod(c->pubsub_patterns,listMatchObjects);
@@ -785,14 +785,13 @@ void unlinkClient(client *c) {
 }
 
 
-void delEpKeys(client *c) {
+void delTpKeys(client *c) {
     listIter li;
     listNode *ln;
-    printf("del ep keys\n");
-    if (listLength(c->epkeylist) == 0) return;
-    listRewind(c->epkeylist,&li);
+    if (listLength(c->tpkeylist) == 0) return;
+    listRewind(c->tpkeylist,&li);
     while((ln = listNext(&li))) {
-        listDelNode(c->epkeylist,ln);
+        listDelNode(c->tpkeylist,ln);
         dbDelete(c->db,ln->value);
     }
 }
@@ -847,7 +846,7 @@ void freeClient(client *c) {
     freeClientArgv(c);
 
     /* del all EPHEMERAL keys*/
-    delEpKeys(c);
+    delTpKeys(c);
     /* Unlink the client: this will close the socket, remove the I/O
      * handlers, and remove references of the client from different
      * places where active clients may be referenced. */

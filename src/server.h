@@ -609,7 +609,7 @@ typedef struct client {
     dict *pubsub_channels;  /* channels a client is interested in (SUBSCRIBE) */
     list *pubsub_patterns;  /* patterns a client is interested in (SUBSCRIBE) */
     sds peerid;             /* Cached peer ID. */
-    list *epkeylist;       /* EPHEMERAL keys*/
+    list *tpkeylist;       /* EPHEMERAL keys*/
     /* Response buffer */
     int bufpos;
     char buf[PROTO_REPLY_CHUNK_BYTES];
@@ -1482,7 +1482,7 @@ void echoCommand(client *c);
 void commandCommand(client *c);
 void setCommand(client *c);
 void setnxCommand(client *c);
-void setepCommand(client *c);
+void settpCommand(client *c);
 void setexCommand(client *c);
 void psetexCommand(client *c);
 void getCommand(client *c);
