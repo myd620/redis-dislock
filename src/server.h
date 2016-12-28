@@ -507,6 +507,7 @@ typedef struct redisDb {
     dict *blocking_keys;        /* Keys with clients waiting for data (BLPOP) */
     dict *ready_keys;           /* Blocked keys that received a PUSH */
     dict *watched_keys;         /* WATCHED keys for MULTI/EXEC CAS */
+	dict *watching_keys;         /*watching keys for dis-lock */
     struct evictionPoolEntry *eviction_pool;    /* Eviction pool of keys */
     int id;                     /* Database ID */
     long long avg_ttl;          /* Average TTL, just for stats */
@@ -606,7 +607,10 @@ typedef struct client {
     blockingState bpop;     /* blocking state */
     long long woff;         /* Last write global replication offset. */
     list *watched_keys;     /* Keys WATCHED for MULTI/EXEC CAS */
-    dict *pubsub_channels;  /* channels a client is interested in (SUBSCRIBE) */
+
+	list *watching_keys;     /* Keys WATCHED for dis-lock */
+
+	dict *pubsub_channels;  /* channels a client is interested in (SUBSCRIBE) */
     list *pubsub_patterns;  /* patterns a client is interested in (SUBSCRIBE) */
     sds peerid;             /* Cached peer ID. */
     list *tpkeylist;       /* EPHEMERAL keys*/
@@ -627,7 +631,7 @@ struct sharedObjectsStruct {
     *outofrangeerr, *noscripterr, *loadingerr, *slowscripterr, *bgsaveerr,
     *masterdownerr, *roslaveerr, *execaborterr, *noautherr, *noreplicaserr,
     *busykeyerr, *oomerr, *plus, *messagebulk, *pmessagebulk, *subscribebulk,
-    *unsubscribebulk, *psubscribebulk, *punsubscribebulk, *del, *rpop, *lpop,
+    *unsubscribebulk, *psubscribebulk, *punsubscribebulk,*watchexbulk,*exist,*noexist ,*add,*chg ,*del, *rpop, *lpop,
     *lpush, *emptyscan, *minstring, *maxstring,
     *select[PROTO_SHARED_SELECT_CMDS],
     *integers[OBJ_SHARED_INTEGERS],
@@ -1172,6 +1176,7 @@ void signalListAsReady(redisDb *db, robj *key);
 
 /* MULTI/EXEC/WATCH... */
 void unwatchAllKeys(client *c);
+void unwatchexAllKeys(client *c);
 void initClientMultiState(client *c);
 void freeClientMultiState(client *c);
 void queueMultiCommand(client *c);
@@ -1614,6 +1619,8 @@ void publishCommand(client *c);
 void pubsubCommand(client *c);
 void watchCommand(client *c);
 void unwatchCommand(client *c);
+void watchexCommand(client *c);
+void unwatchexCommand(client *c);
 void clusterCommand(client *c);
 void restoreCommand(client *c);
 void migrateCommand(client *c);
@@ -1646,6 +1653,9 @@ void pfcountCommand(client *c);
 void pfmergeCommand(client *c);
 void pfdebugCommand(client *c);
 void latencyCommand(client *c);
+
+//for watchex
+void watchnotify(redisDb *db,robj *key ,int type);
 
 #if defined(__GNUC__)
 void *calloc(size_t count, size_t size) __attribute__ ((deprecated));

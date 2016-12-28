@@ -16,7 +16,15 @@ void getCallback(redisAsyncContext *c, void *r, void *privdata) {
     printf("argv[%s]: %s\n", (char*)privdata, reply->str);
 
     /* Disconnect after receiving the reply to GET */
-    redisAsyncDisconnect(c);
+    //redisAsyncDisconnect(c);
+}
+
+void watchexCallback(redisAsyncContext *c, void *r, void *privdata)
+{
+    redisReply *reply = r;
+    if (reply == NULL) return;
+    printf("argv[%s]: %s\n", (char*)privdata, reply->element[2]->str);  
+	return;
 }
 
 void connectCallback(const redisAsyncContext *c, int status) {
@@ -56,6 +64,7 @@ int main (int argc, char **argv) {
     redisAsyncSetDisconnectCallback(c,disconnectCallback);
     redisAsyncCommand(c, NULL, NULL, "SET key %b", argv[argc-1], strlen(argv[argc-1]));
     redisAsyncCommand(c, getCallback, (char*)"end-1", "GET key");
+	redisAsyncCommand(c, watchexCallback, (char*)"xx", "watchex key");
     aeMain(loop);
     return 0;
 }

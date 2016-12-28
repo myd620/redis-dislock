@@ -120,6 +120,7 @@ client *createClient(int fd) {
     c->bpop.reploffset = 0;
     c->woff = 0;
     c->watched_keys = listCreate();
+	c->watching_keys  = listCreate();
     c->pubsub_channels = dictCreate(&setDictType,NULL);
     c->pubsub_patterns = listCreate();
 	c->tpkeylist       = listCreate();
@@ -834,6 +835,8 @@ void freeClient(client *c) {
     /* UNWATCH all the keys */
     unwatchAllKeys(c);
     listRelease(c->watched_keys);
+	unwatchexAllKeys(c);
+	listRelease(c->watching_keys);
 
     /* Unsubscribe from all the pubsub channels */
     pubsubUnsubscribeAllChannels(c,0);

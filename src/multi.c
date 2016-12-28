@@ -321,3 +321,162 @@ void unwatchCommand(client *c) {
     c->flags &= (~CLIENT_DIRTY_CAS);
     addReply(c,shared.ok);
 }
+
+
+/*********************************************************
+add for watchex cmd
+*********************************************************/
+void watchExForKey(client *c, robj *key) {
+    list *clients = NULL;
+    listIter li;
+    listNode *ln;
+    watchedKey *wk;
+
+    /* Check if we are already watching for this key */
+    listRewind(c->watching_keys,&li);
+    while((ln = listNext(&li))) {
+        wk = listNodeValue(ln);
+        if (wk->db == c->db && equalStringObjects(key,wk->key))
+            return; 
+    }
+    /* This key is not already watched in this DB. Let's add it */
+    clients = dictFetchValue(c->db->watching_keys,key);
+    if (!clients) {
+        clients = listCreate();
+        dictAdd(c->db->watching_keys,key,clients);
+        incrRefCount(key);
+    }
+    listAddNodeTail(clients,c);
+    wk = zmalloc(sizeof(*wk));
+    wk->key = key;
+    wk->db = c->db;
+    incrRefCount(key);
+    listAddNodeTail(c->watching_keys,wk);
+}
+
+void watchexCommand(client *c) {
+    watchExForKey(c,c->argv[1]);
+	if(dbExists(c->db, c->argv[1]))
+    {
+		addReply(c,shared.mbulkhdr[3]);
+		addReply(c,shared.watchexbulk);
+		addReplyBulk(c,c->argv[1]);		
+        addReplyBulk(c,shared.exist);
+    }
+	else
+	{	
+		addReply(c,shared.mbulkhdr[3]);
+		addReply(c,shared.watchexbulk);
+		addReplyBulk(c,c->argv[1]);		
+	    addReplyBulk(c,shared.noexist);
+	}
+}
+
+
+int SdsKeyCompare(const void *key1,const void *key2)
+{
+	int l1,l2;
+	l1 = sdslen((sds)key1);
+	l2 = sdslen((sds)key2);
+	if (l1 != l2) return 0;
+	return memcmp(key1, key2, l1) == 0;
+}
+
+
+void unwatchExForKey(client *c, robj *key) {
+	listIter li;
+    listNode *ln;
+	list *clients;
+	watchedKey *wk;
+    if (listLength(c->watching_keys) == 0 )
+	{  
+	    return;
+    }
+    listRewind(c->watching_keys,&li);
+	while((ln = listNext(&li)))
+	{
+	    wk = listNodeValue(ln);
+		if (key==wk->key || SdsKeyCompare( key, wk->key))
+		{
+		    decrRefCount(wk->key);
+		    listDelNode(c->watching_keys,ln);
+		    break;
+		}
+	}
+	
+    clients = dictFetchValue(c->db->watching_keys,key);
+    if (!clients) 
+    {
+		return;
+    }
+    listDelNode(clients,listSearchKey(clients,c));
+    if (listLength(clients) == 0)
+        dictDelete(c->db->watching_keys, key);
+}
+
+
+void unwatchexCommand(client *c)
+{
+    unwatchExForKey(c,c->argv[1]);
+	addReply(c,shared.ok);
+}
+
+void unwatchexAllKeys(client *c) {
+    listIter li;
+    listNode *ln;
+
+    if (listLength(c->watching_keys) == 0) return;
+    listRewind(c->watching_keys,&li);
+    while((ln = listNext(&li))) {
+        list *clients;
+        watchedKey *wk;
+
+        wk = listNodeValue(ln);
+        clients = dictFetchValue(wk->db->watching_keys, wk->key);
+        serverAssertWithInfo(c,NULL,clients != NULL);
+        listDelNode(clients,listSearchKey(clients,c));
+        if (listLength(clients) == 0)
+            dictDelete(wk->db->watching_keys, wk->key);
+        listDelNode(c->watching_keys,ln);
+        decrRefCount(wk->key);
+        zfree(wk);
+    }
+}
+
+
+void watchnotify(redisDb *db,robj *key ,int type)
+{
+    list *clients = NULL;
+    listIter li;
+    listNode *ln;
+	client* c;
+	robj * obj;
+	clients = dictFetchValue(db->watching_keys,key);
+	if(clients)
+	{
+	    if(type == 1)
+	    {
+	        obj = shared.add;
+	    }
+		else if(type == 2)
+		{
+		    obj = shared.del;
+		}
+		else if(type == 3)
+		{
+		    obj = shared.chg;
+		}
+		else
+			return;
+	    listRewind(clients,&li);
+	    while((ln = listNext(&li))) {
+	        c = listNodeValue(ln);
+			addReply(c,shared.mbulkhdr[3]);
+            addReply(c,shared.watchexbulk);
+            addReplyBulk(c,key);
+            addReplyBulk(c,obj);
+        }
+	}
+}
+
+

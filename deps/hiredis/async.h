@@ -40,6 +40,17 @@ extern "C" {
 struct redisAsyncContext; /* need forward declaration of redisAsyncContext */
 struct dict; /* dictionary header is included in async.c */
 
+
+typedef void (*watchFn)(struct redisAsyncContext* ac, int type, 
+         char *key,void *watchCtx);
+
+typedef struct watchCallback {
+    watchFn *fn;
+    void *watchCtx;
+	struct WatchCallback *next;
+} WatchCallback;
+
+
 /* Reply callback prototype and container */
 typedef void (redisCallbackFn)(struct redisAsyncContext*, void*, void*);
 typedef struct redisCallback {
@@ -92,6 +103,9 @@ typedef struct redisAsyncContext {
     /* Regular command callbacks */
     redisCallbackList replies;
 
+    /*watchex command callbacks */
+	struct dict *watchCallbacks;
+	
     /* Subscription callbacks */
     struct {
         redisCallbackList invalid;

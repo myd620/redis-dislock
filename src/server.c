@@ -264,6 +264,8 @@ struct redisCommand redisCommandTable[] = {
     {"pubsub",pubsubCommand,-2,"pltR",0,NULL,0,0,0,0,0},
     {"watch",watchCommand,-2,"sF",0,NULL,1,-1,1,0,0},
     {"unwatch",unwatchCommand,1,"sF",0,NULL,0,0,0,0,0},
+    {"watchex",watchexCommand,-2,"sF",0,NULL,1,-1,1,0,0},
+    {"unwatchex",unwatchexCommand,-2,"sF",0,NULL,0,0,0,0,0},
     {"cluster",clusterCommand,-2,"a",0,NULL,0,0,0,0,0},
     {"restore",restoreCommand,-4,"wm",0,NULL,1,1,1,0,0},
     {"restore-asking",restoreCommand,-4,"wmk",0,NULL,1,1,1,0,0},
@@ -1425,6 +1427,11 @@ void createSharedObjects(void) {
     shared.unsubscribebulk = createStringObject("$11\r\nunsubscribe\r\n",18);
     shared.psubscribebulk = createStringObject("$10\r\npsubscribe\r\n",17);
     shared.punsubscribebulk = createStringObject("$12\r\npunsubscribe\r\n",19);
+	shared.watchexbulk = createStringObject("$10\r\nwatchevent\r\n",17);
+	shared.exist= createStringObject("EXIST",5);
+	shared.noexist= createStringObject("NOEXIST",7);
+	shared.add = createStringObject("ADD",3);
+	shared.chg = createStringObject("CHG",3);
     shared.del = createStringObject("DEL",3);
     shared.rpop = createStringObject("RPOP",4);
     shared.lpop = createStringObject("LPOP",4);
@@ -1920,6 +1927,7 @@ void initServer(void) {
         server.db[j].blocking_keys = dictCreate(&keylistDictType,NULL);
         server.db[j].ready_keys = dictCreate(&setDictType,NULL);
         server.db[j].watched_keys = dictCreate(&keylistDictType,NULL);
+		server.db[j].watching_keys = dictCreate(&keylistDictType,NULL);
         server.db[j].eviction_pool = evictionPoolAlloc();
         server.db[j].id = j;
         server.db[j].avg_ttl = 0;

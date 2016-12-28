@@ -1132,7 +1132,7 @@ int redisEnableKeepAlive(redisContext *c) {
  * After this function is called, you may use redisContextReadReply to
  * see if there is a reply available. */
 int redisBufferRead(redisContext *c) {
-    char buf[1024*16];
+    char buf[1024*16]={0};
     int nread;
 
     /* Return early when the context has seen an error. */
